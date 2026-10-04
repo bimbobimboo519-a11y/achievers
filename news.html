@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>News & Events | Achievers University</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="main-nav">
+      <a href="/" class="logo"><div class="logo-icon">AU</div><div>Achievers University</div></a>
+      <ul class="nav-links">
+        <li><a href="/">Home</a></li>
+        <li><a href="/about.html">About</a></li>
+        <li><a href="/programmes.html">Programmes</a></li>
+        <li><a href="/news.html" class="active">News</a></li>
+        <li><a href="/admissions.html">Admissions</a></li>
+        <li><a href="/contact.html">Contact</a></li>
+        <li><a href="/login.html" class="btn btn-primary btn-sm">Login</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <section class="hero" style="padding:3rem 2rem;">
+    <div style="max-width:900px;margin:0 auto;text-align:center;">
+      <h1>News, Announcements & Press Releases</h1>
+      <p>Stay informed about campus events, academic updates and official notices</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="cards-grid" id="newsList">
+      <p class="text-muted">Loading news…</p>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <div class="footer-bottom">© 2026 Achievers University, Owo.</div>
+  </footer>
+
+  <script>
+    fetch('/api/news')
+      .then(r => r.json())
+      .then(news => {
+        document.getElementById('newsList').innerHTML = news.map(n => `
+          <div class="card" id="${n.slug}">
+            <div class="card-body">
+              <span class="badge badge-green">${n.category}</span>
+              <h3 style="margin-top:0.6rem;">${n.title}</h3>
+              <p class="meta">${new Date(n.published_at).toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'})}</p>
+              <p>${n.excerpt}</p>
+              <details style="margin-top:0.8rem;">
+                <summary style="cursor:pointer;color:var(--primary);font-weight:600;">Read full story</summary>
+                <p style="margin-top:0.6rem;line-height:1.7;">${n.content}</p>
+              </details>
+            </div>
+          </div>
+        `).join('');
+      })
+      .catch(() => {
+        document.getElementById('newsList').innerHTML = '<p>Unable to load news. Ensure the server is running.</p>';
+      });
+  </script>
+</body>
+</html>

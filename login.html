@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login | Achievers University Portal</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="login-page">
+    <div class="login-card">
+      <div class="login-logo">
+        <div class="logo-icon">AU</div>
+        <h1>ACHIEVERS UNIVERSITY</h1>
+        <p>UNIVERSITY MANAGEMENT SYSTEM</p>
+      </div>
+
+      <div style="text-align:center;margin-bottom:1.5rem;">
+        <div style="width:56px;height:56px;background:#fef9c3;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;font-size:1.5rem;">🔒</div>
+      </div>
+
+      <!-- Login Form -->
+      <div id="loginForm">
+        <div id="loginAlert" class="hidden"></div>
+        <div class="form-group">
+          <label for="email">Username or email</label>
+          <input type="email" id="email" class="form-control" placeholder="yourname@student.achievers.edu.ng" required>
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" class="form-control" placeholder="••••••••" required>
+        </div>
+        <div class="form-row">
+          <label style="display:flex;align-items:center;gap:0.4rem;font-weight:400;">
+            <input type="checkbox" id="remember"> Remember me
+          </label>
+          <a href="#" style="color:var(--accent-gold);">Forgot password?</a>
+        </div>
+        <button type="button" class="btn btn-green" onclick="doLogin()">Sign in</button>
+        <p class="text-center mt-2" style="font-size:0.8rem;color:var(--text-muted);">
+          🛡️ Secured single sign-on
+        </p>
+      </div>
+
+      <!-- First-time password creation -->
+      <div id="setPasswordForm" class="hidden">
+        <div class="alert alert-info">
+          First login detected. Please create your password to continue.
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="setEmail" class="form-control" readonly>
+        </div>
+        <div class="form-group">
+          <label for="newPassword">Create Password</label>
+          <input type="password" id="newPassword" class="form-control" placeholder="Min. 6 characters" required>
+        </div>
+        <div class="form-group">
+          <label for="confirmPassword">Confirm Password</label>
+          <input type="password" id="confirmPassword" class="form-control" required>
+        </div>
+        <div id="setPassAlert" class="hidden"></div>
+        <button type="button" class="btn btn-green" onclick="setPassword()">Create Password & Sign in</button>
+      </div>
+
+      <div style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--border);font-size:0.8rem;color:var(--text-muted);">
+        <strong>Demo Accounts:</strong><br>
+        Student: <code>taiwo.boluwatife@student.achievers.edu.ng</code> / password123<br>
+        First-login: <code>demo.student@student.achievers.edu.ng</code> (create password)<br>
+        Staff: <code>staff@achievers.edu.ng</code> / password123
+      </div>
+
+      <p class="text-center mt-2">
+        <a href="/">← Back to Homepage</a>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    const alertEl = document.getElementById('loginAlert');
+    const setPassAlert = document.getElementById('setPassAlert');
+
+    function showAlert(el, msg, type = 'error') {
+      el.className = `alert alert-${type}`;
+      el.textContent = msg;
+      el.classList.remove('hidden');
+    }
+
+    async function doLogin() {
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      if (!email || !password) {
+        showAlert(alertEl, 'Please enter email and password');
+        return;
+      }
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (data.firstLogin) {
+          document.getElementById('loginForm').classList.add('hidden');
+          document.getElementById('setPasswordForm').classList.remove('hidden');
+          document.getElementById('setEmail').value = data.email;
+          return;
+        }
+        if (!res.ok) {
+          showAlert(alertEl, data.error || 'Login failed');
+          return;
+        }
+        // Redirect based on role
+        if (data.user.role === 'student') {
+          window.location.href = '/student/dashboard.html';
+        } else {
+          window.location.href = '/staff/dashboard.html';
+        }
+      } catch (e) {
+        showAlert(alertEl, 'Network error. Is the server running?');
+      }
+    }
+
+    async function setPassword() {
+      const email = document.getElementById('setEmail').value;
+      const password = document.getElementById('newPassword').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+      try {
+        const res = await fetch('/api/auth/set-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password, confirmPassword })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          showAlert(setPassAlert, data.error || 'Failed');
+          return;
+        }
+        if (data.user.role === 'student') {
+          window.location.href = '/student/dashboard.html';
+        } else {
+          window.location.href = '/staff/dashboard.html';
+        }
+      } catch (e) {
+        showAlert(setPassAlert, 'Network error');
+      }
+    }
+
+    // Enter key support
+    document.getElementById('password').addEventListener('keypress', e => {
+      if (e.key === 'Enter') doLogin();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Staff Dashboard | Achievers University</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="portal-layout">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-icon" style="width:40px;height:40px;font-size:1rem;">AU</div>
+        <div>
+          <strong style="font-size:0.95rem;">Achievers Portal</strong><br>
+          <small style="opacity:0.8;">Staff</small>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="#" class="active" data-page="dashboard">📊 Dashboard</a>
+        <a href="#" data-page="profile">👤 My Profile</a>
+        <a href="#" data-page="courses">📚 My Courses</a>
+        <a href="#" data-page="students">👨‍🎓 Students</a>
+        <a href="#" data-page="announcements">📢 Announcements</a>
+        <a href="#" data-page="support">🆘 Support</a>
+      </nav>
+      <div class="sidebar-footer">
+        <div id="sidebarUser" style="margin-bottom:0.5rem;font-weight:600;"></div>
+        <button class="btn btn-sm" style="border:1px solid var(--border);background:white;width:100%;" onclick="logout()">Logout</button>
+      </div>
+    </aside>
+
+    <div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+    <div class="main-content">
+      <div class="portal-topbar">
+        <div style="display:flex;align-items:center;gap:0.75rem;">
+          <button class="menu-toggle" onclick="toggleSidebar()" aria-label="Menu">☰</button>
+          <strong id="pageTitle">Dashboard</strong>
+        </div>
+        <div style="display:flex;align-items:center;gap:1rem;">
+          <span id="topUserName"></span>
+          <div class="avatar" id="topAvatar" style="width:36px;height:36px;font-size:0.9rem;"></div>
+        </div>
+      </div>
+      <div class="portal-body" id="content"></div>
+    </div>
+  </div>
+
+  <script>
+    let staffData = null;
+
+    async function checkAuth() {
+      try {
+        const res = await fetch('/api/auth/me');
+        if (!res.ok) { window.location.href = '/login.html'; return null; }
+        return await res.json();
+      } catch { window.location.href = '/login.html'; return null; }
+    }
+
+    async function loadDashboard() {
+      const res = await fetch('/api/staff/dashboard');
+      if (!res.ok) { window.location.href = '/login.html'; return; }
+      staffData = await res.json();
+      render();
+    }
+
+    function render() {
+      const u = staffData.user, s = staffData.staff;
+      document.getElementById('sidebarUser').textContent = `${u.first_name} ${u.last_name}`;
+      document.getElementById('topUserName').textContent = `${u.first_name} ${u.last_name}`;
+      document.getElementById('topAvatar').textContent = (u.first_name[0] + u.last_name[0]).toUpperCase();
+
+      document.getElementById('content').innerHTML = `
+        <div class="profile-banner">
+          <div class="avatar">${(u.first_name[0]+u.last_name[0]).toUpperCase()}</div>
+          <div class="profile-info" style="flex:1;">
+            <h2>${u.first_name} ${u.last_name}</h2>
+            <p>${s.designation} · ${s.department}</p>
+          </div>
+        </div>
+
+        <div class="stats-row" style="grid-template-columns:repeat(4,1fr);">
+          <div class="stat-box"><label>Staff ID</label><div class="value" style="font-size:1rem;">${s.staff_id}</div></div>
+          <div class="stat-box"><label>Department</label><div class="value" style="font-size:0.95rem;">${s.department}</div></div>
+          <div class="stat-box"><label>Faculty</label><div class="value" style="font-size:0.95rem;">${s.faculty}</div></div>
+          <div class="stat-box"><label>Employed</label><div class="value" style="font-size:0.95rem;">${s.employment_date}</div></div>
+        </div>
+
+        <div class="two-col">
+          <div class="panel">
+            <div class="panel-header"><h3>Quick Actions</h3></div>
+            <div class="panel-body" style="display:flex;flex-wrap:wrap;gap:0.75rem;">
+              <button class="btn btn-green" onclick="showPage('students')">View Students</button>
+              <button class="btn btn-green" onclick="showPage('courses')">My Courses</button>
+              <button class="btn btn-gold" onclick="showPage('announcements')">Post Announcement</button>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-header"><h3>Profile Snapshot</h3></div>
+            <div class="panel-body" style="font-size:0.9rem;">
+              <p><strong>Email:</strong> ${u.email}</p>
+              <p><strong>Phone:</strong> ${u.phone || '—'}</p>
+              <p><strong>Designation:</strong> ${s.designation}</p>
+              <p><strong>Department:</strong> ${s.department}</p>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function showPage(page) {
+      document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
+      const link = document.querySelector(`[data-page="${page}"]`);
+      if (link) link.classList.add('active');
+      document.getElementById('pageTitle').textContent = link ? link.textContent.trim() : page;
+
+      if (page === 'dashboard') { render(); return; }
+
+      if (page === 'profile') {
+        const u = staffData.user, s = staffData.staff;
+        document.getElementById('content').innerHTML = `
+          <div class="panel">
+            <div class="panel-header"><h3>My Profile</h3></div>
+            <div class="panel-body">
+              <p><strong>Name:</strong> ${u.first_name} ${u.last_name}</p>
+              <p><strong>Email:</strong> ${u.email}</p>
+              <p><strong>Staff ID:</strong> ${s.staff_id}</p>
+              <p><strong>Designation:</strong> ${s.designation}</p>
+              <p><strong>Department:</strong> ${s.department}</p>
+              <p><strong>Faculty:</strong> ${s.faculty}</p>
+              <p><strong>Employment Date:</strong> ${s.employment_date}</p>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      document.getElementById('content').innerHTML = `
+        <div class="panel">
+          <div class="panel-header"><h3>${page}</h3></div>
+          <div class="panel-body"><p class="text-muted">Feature available in full production system. Demo focuses on core profile & dashboard.</p></div>
+        </div>
+      `;
+    }
+
+    async function logout() {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.href = '/login.html';
+    }
+
+    function toggleSidebar() {
+      document.querySelector('.sidebar').classList.toggle('open');
+      document.getElementById('overlay').classList.toggle('show');
+    }
+    function closeSidebar() {
+      document.querySelector('.sidebar').classList.remove('open');
+      document.getElementById('overlay').classList.remove('show');
+    }
+    document.querySelectorAll('.sidebar-nav a').forEach(a => {
+      a.addEventListener('click', e => { e.preventDefault(); showPage(a.dataset.page); closeSidebar(); });
+    });
+
+    (async () => {
+      const auth = await checkAuth();
+      if (auth) await loadDashboard();
+    })();
+  </script>
+</body>
+</html>

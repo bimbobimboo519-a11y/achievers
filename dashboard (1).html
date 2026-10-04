@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Dashboard | Achievers University</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="portal-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-icon" style="width:40px;height:40px;font-size:1rem;">AU</div>
+        <div>
+          <strong style="font-size:0.95rem;">Achievers Portal</strong><br>
+          <small style="opacity:0.8;">Student</small>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="#" class="active" data-page="dashboard">📊 Dashboard</a>
+        <a href="#" data-page="profile">👤 My Profile</a>
+        <a href="#" data-page="courses">📚 Course Forms</a>
+        <a href="#" data-page="curriculum">📋 Curriculum</a>
+        <a href="#" data-page="ledger">📒 Course Ledger</a>
+        <a href="#" data-page="results">📈 My Results</a>
+        <a href="#" data-page="payments">💳 My Payments</a>
+        <a href="#" data-page="hostel">🏠 Hostel</a>
+        <a href="#" data-page="email">✉️ Request School Mail</a>
+        <a href="#" data-page="support">🆘 Support</a>
+      </nav>
+      <div class="sidebar-footer">
+        <div id="sidebarUser" style="margin-bottom:0.5rem;font-weight:600;"></div>
+        <button class="btn btn-sm btn-outline" style="border-color:var(--border);color:var(--text);width:100%;" onclick="logout()">Logout</button>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+    <div class="main-content">
+      <div class="portal-topbar">
+        <div style="display:flex;align-items:center;gap:0.75rem;">
+          <button class="menu-toggle" onclick="toggleSidebar()" aria-label="Menu">☰</button>
+          <strong id="pageTitle">Dashboard</strong>
+        </div>
+        <div style="display:flex;align-items:center;gap:1rem;">
+          <span id="topUserName"></span>
+          <div class="avatar" id="topAvatar" style="width:36px;height:36px;font-size:0.9rem;"></div>
+        </div>
+      </div>
+
+      <div class="portal-body" id="content">
+        <!-- Dynamic content -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let dashboardData = null;
+
+    async function checkAuth() {
+      try {
+        const res = await fetch('/api/auth/me');
+        if (!res.ok) {
+          window.location.href = '/login.html';
+          return null;
+        }
+        return await res.json();
+      } catch {
+        window.location.href = '/login.html';
+        return null;
+      }
+    }
+
+    async function loadDashboard() {
+      const res = await fetch('/api/student/dashboard');
+      if (!res.ok) {
+        window.location.href = '/login.html';
+        return;
+      }
+      dashboardData = await res.json();
+      renderDashboard();
+    }
+
+    function renderDashboard() {
+      const d = dashboardData;
+      const s = d.student;
+      const u = d.user;
+      document.getElementById('sidebarUser').textContent = `${u.first_name} ${u.last_name}`;
+      document.getElementById('topUserName').textContent = `${u.first_name} ${u.last_name}`;
+      document.getElementById('topAvatar').textContent = (u.first_name[0] + u.last_name[0]).toUpperCase();
+
+      const medicalBanner = d.medicalIncomplete ? `
+        <div class="alert-banner warning">
+          <div>
+            <strong>❤️ Medical profile incomplete</strong><br>
+            <small>Your blood group and/or genotype are missing from your record.</small>
+          </div>
+          <button class="btn btn-sm btn-gold" onclick="showPage('profile')">View</button>
+        </div>
+      ` : '';
+
+      const emailBanner = d.emailRequest && d.emailRequest.status === 'Pending' ? `
+        <div class="alert-banner danger">
+          <div>
+            <strong>✉️ Official email request needs attention</strong><br>
+            <small>Your previous request could not be completed. You can request again.</small>
+          </div>
+          <button class="btn btn-sm btn-danger" onclick="showPage('email')">Request again</button>
+        </div>
+      ` : '';
+
+      document.getElementById('content').innerHTML = `
+        <div class="profile-banner">
+          <div class="avatar">${(u.first_name[0]+u.last_name[0]).toUpperCase()}</div>
+          <div class="profile-info" style="flex:1;">
+            <h2>${u.first_name} ${u.last_name}</h2>
+            <p>${s.level} · ${s.programme} · Undergraduate School</p>
+          </div>
+          <button class="btn btn-sm btn-outline" style="border-color:var(--border);color:var(--text);" onclick="showPage('profile')">View profile →</button>
+        </div>
+
+        ${medicalBanner}
+        ${emailBanner}
+
+        <div class="stats-row">
+          <div class="stat-box"><label>CGPA</label><div class="value">${s.cgpa > 0 ? s.cgpa.toFixed(2) : 'N/A'}</div></div>
+          <div class="stat-box"><label>CTNU</label><div class="value">${s.ctnu || 'N/A'}</div></div>
+          <div class="stat-box"><label>CTCP</label><div class="value">${s.ctcp || 'N/A'}</div></div>
+          <div class="stat-box"><label>Ledger Balance</label><div class="value green">₦${d.payments.outstanding.toLocaleString()}</div></div>
+          <div class="stat-box"><label>Enrollment Status</label><div class="value orange">${s.enrollment_status}</div></div>
+        </div>
+
+        <div class="two-col">
+          <div class="panel">
+            <div class="panel-header">
+              <h3>Course Registration — 2025/2026</h3>
+              <a href="#" onclick="showPage('courses');return false;" style="font-size:0.85rem;color:var(--primary);">Course Ledger →</a>
+            </div>
+            <div class="panel-body">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                <div class="semester-box">
+                  <h4>First Semester <span>${d.courseReg.first.units}/${d.courseReg.first.maxUnits} units</span></h4>
+                  <div class="progress-bar"><div class="fill" style="width:${Math.min(100,(d.courseReg.first.units/d.courseReg.first.maxUnits)*100)}%"></div></div>
+                  <small class="text-muted">${d.courseReg.first.courses}/${d.courseReg.first.maxCourses} courses registered</small>
+                </div>
+                <div class="semester-box">
+                  <h4>Second Semester <span>${d.courseReg.second.units}/${d.courseReg.second.maxUnits} units</span></h4>
+                  <div class="progress-bar"><div class="fill" style="width:${Math.min(100,(d.courseReg.second.units/d.courseReg.second.maxUnits)*100)}%"></div></div>
+                  <small class="text-muted">${d.courseReg.second.courses}/${d.courseReg.second.maxCourses} courses registered</small>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header"><h3>Academic Profile Snapshot</h3></div>
+            <div class="panel-body" style="font-size:0.9rem;">
+              <div style="display:flex;justify-content:space-between;padding:0.4rem 0;border-bottom:1px solid var(--border);">
+                <span class="text-muted">Level</span><strong>${s.level}</strong>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding:0.4rem 0;border-bottom:1px solid var(--border);">
+                <span class="text-muted">Academic status</span><strong class="text-success">${s.academic_status}</strong>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding:0.4rem 0;border-bottom:1px solid var(--border);">
+                <span class="text-muted">Entry session</span><strong>${s.entry_session}</strong>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding:0.4rem 0;border-bottom:1px solid var(--border);">
+                <span class="text-muted">Programme</span><strong>${s.programme}</strong>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding:0.4rem 0;border-bottom:1px solid var(--border);">
+                <span class="text-muted">Department</span><strong>${s.department}</strong>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding:0.4rem 0;">
+                <span class="text-muted">Projected graduation</span><strong>${s.projected_graduation || 'Est. 4–5 years'}</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h3>My Payments</h3>
+            <a href="#" onclick="showPage('payments');return false;" style="font-size:0.85rem;color:var(--primary);">View all →</a>
+          </div>
+          <div class="panel-body">
+            <div class="stats-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:0;">
+              <div class="stat-box"><label>Outstanding</label><div class="value">₦${d.payments.outstanding.toLocaleString()}</div></div>
+              <div class="stat-box"><label>Total Paid</label><div class="value green">₦${d.payments.totalPaid.toLocaleString()}</div></div>
+              <div class="stat-box"><label>Pending Invoices</label><div class="value">${d.payments.pendingInvoices}</div></div>
+              <div class="stat-box"><label>Last Payment</label><div class="value" style="font-size:0.95rem;">${d.payments.lastPayment ? new Date(d.payments.lastPayment).toLocaleDateString('en-GB') : '—'}</div></div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    async function showPage(page) {
+      document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
+      const link = document.querySelector(`[data-page="${page}"]`);
+      if (link) link.classList.add('active');
+      document.getElementById('pageTitle').textContent = link ? link.textContent.trim() : page;
+
+      if (page === 'dashboard') {
+        await loadDashboard();
+        return;
+      }
+
+      if (page === 'profile') {
+        const d = dashboardData || await (await fetch('/api/student/dashboard')).json();
+        const s = d.student, u = d.user;
+        document.getElementById('content').innerHTML = `
+          <div class="panel">
+            <div class="panel-header"><h3>My Profile</h3></div>
+            <div class="panel-body">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+                <div>
+                  <h4 style="margin-bottom:1rem;color:var(--primary);">Personal Information</h4>
+                  <p><strong>Name:</strong> ${u.first_name} ${u.last_name}</p>
+                  <p><strong>Email:</strong> ${u.email}</p>
+                  <p><strong>Phone:</strong> ${u.phone || '—'}</p>
+                  <p><strong>Matric No:</strong> ${s.matric_number}</p>
+                </div>
+                <div>
+                  <h4 style="margin-bottom:1rem;color:var(--primary);">Academic Information</h4>
+                  <p><strong>Level:</strong> ${s.level}</p>
+                  <p><strong>Programme:</strong> ${s.programme}</p>
+                  <p><strong>Department:</strong> ${s.department}</p>
+                  <p><strong>Faculty:</strong> ${s.faculty}</p>
+                  <p><strong>Session:</strong> ${s.entry_session}</p>
+                </div>
+              </div>
+              <hr style="margin:1.5rem 0;border:none;border-top:1px solid var(--border);">
+              <h4 style="margin-bottom:1rem;color:var(--primary);">Medical Information</h4>
+              <div style="display:flex;gap:1rem;align-items:flex-end;">
+                <div class="form-group" style="margin:0;">
+                  <label>Blood Group</label>
+                  <select id="bloodGroup" class="form-control">
+                    <option value="">Select</option>
+                    ${['A+','A-','B+','B-','AB+','AB-','O+','O-'].map(b => `<option value="${b}" ${s.blood_group===b?'selected':''}>${b}</option>`).join('')}
+                  </select>
+                </div>
+                <div class="form-group" style="margin:0;">
+                  <label>Genotype</label>
+                  <select id="genotype" class="form-control">
+                    <option value="">Select</option>
+                    ${['AA','AS','SS','AC','SC'].map(g => `<option value="${g}" ${s.genotype===g?'selected':''}>${g}</option>`).join('')}
+                  </select>
+                </div>
+                <button class="btn btn-green" onclick="saveMedical()">Save</button>
+              </div>
+              <div id="medAlert" class="hidden mt-2"></div>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      if (page === 'courses') {
+        const res = await fetch('/api/student/courses');
+        const data = await res.json();
+        document.getElementById('content').innerHTML = `
+          <div class="panel">
+            <div class="panel-header"><h3>Course Registration — 2025/2026</h3></div>
+            <div class="panel-body">
+              <h4 style="margin-bottom:0.8rem;">Registered Courses</h4>
+              <table class="table">
+                <thead><tr><th>Code</th><th>Title</th><th>Units</th><th>Semester</th><th>Action</th></tr></thead>
+                <tbody>
+                  ${data.registered.length ? data.registered.map(c => `
+                    <tr>
+                      <td><strong>${c.code}</strong></td>
+                      <td>${c.title}</td>
+                      <td>${c.units}</td>
+                      <td>${c.semester}</td>
+                      <td><button class="btn btn-sm btn-danger" onclick="dropCourse(${c.id})">Drop</button></td>
+                    </tr>
+                  `).join('') : '<tr><td colspan="5" class="text-center text-muted">No courses registered yet</td></tr>'}
+                </tbody>
+              </table>
+              <h4 style="margin:1.5rem 0 0.8rem;">Available Courses</h4>
+              <table class="table">
+                <thead><tr><th>Code</th><th>Title</th><th>Units</th><th>Semester</th><th>Action</th></tr></thead>
+                <tbody>
+                  ${data.available.map(c => {
+                    const reg = data.registered.find(r => r.id === c.id);
+                    return `
+                      <tr>
+                        <td><strong>${c.code}</strong></td>
+                        <td>${c.title}</td>
+                        <td>${c.units}</td>
+                        <td>${c.semester}</td>
+                        <td>${reg ? '<span class="badge badge-green">Registered</span>' : `<button class="btn btn-sm btn-green" onclick="regCourse(${c.id})">Register</button>`}</td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      if (page === 'results') {
+        const res = await fetch('/api/student/results');
+        const data = await res.json();
+        document.getElementById('content').innerHTML = `
+          <div class="panel">
+            <div class="panel-header"><h3>Semester Results</h3></div>
+            <div class="panel-body">
+              <p class="mb-2">Current CGPA: <strong>${data.cgpa > 0 ? data.cgpa.toFixed(2) : 'N/A (100 Level – no results yet)'}</strong></p>
+              ${data.results.length ? `
+                <table class="table">
+                  <thead><tr><th>Code</th><th>Title</th><th>Units</th><th>Score</th><th>Grade</th><th>Session</th></tr></thead>
+                  <tbody>
+                    ${data.results.map(r => `
+                      <tr>
+                        <td>${r.code}</td><td>${r.title}</td><td>${r.units}</td>
+                        <td>${r.score}</td><td><strong>${r.grade}</strong></td><td>${r.session}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              ` : '<p class="text-muted text-center" style="padding:2rem;">No results published yet for your level.</p>'}
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      if (page === 'payments') {
+        const d = dashboardData || await (await fetch('/api/student/dashboard')).json();
+        document.getElementById('content').innerHTML = `
+          <div class="panel">
+            <div class="panel-header"><h3>My Payments</h3></div>
+            <div class="panel-body">
+              <div style="display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap;">
+                <button class="btn btn-green" onclick="makePayment('School Fees', 450000)">Pay School Fees (₦450,000)</button>
+                <button class="btn btn-green" onclick="makePayment('Hostel Fee', 120000)">Pay Hostel Fee (₦120,000)</button>
+                <button class="btn btn-gold" onclick="makePayment('Acceptance Fee', 50000)">Pay Acceptance (₦50,000)</button>
+              </div>
+              <table class="table">
+                <thead><tr><th>Type</th><th>Amount</th><th>Reference</th><th>Status</th><th>Date</th></tr></thead>
+                <tbody>
+                  ${d.payments.list.map(p => `
+                    <tr>
+                      <td>${p.payment_type}</td>
+                      <td>₦${p.amount.toLocaleString()}</td>
+                      <td><code>${p.reference}</code></td>
+                      <td><span class="badge ${p.status==='Paid'?'badge-green':'badge-gold'}">${p.status}</span></td>
+                      <td>${p.paid_at ? new Date(p.paid_at).toLocaleDateString('en-GB') : '—'}</td>
+                    </tr>
+                  `).join('') || '<tr><td colspan="5" class="text-center">No payments yet</td></tr>'}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      if (page === 'hostel') {
+        document.getElementById('content').innerHTML = `
+          <div class="panel">
+            <div class="panel-header"><h3>Hostel Accommodation</h3></div>
+            <div class="panel-body">
+              <p class="mb-2">Apply for on-campus hostel for the current session.</p>
+              <div class="cards-grid" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr));">
+                <div class="card"><div class="card-body">
+                  <h3>Male Hall A</h3>
+                  <p class="meta">4-bed room · ₦120,000 / session</p>
+                  <button class="btn btn-sm btn-green mt-1" onclick="makePayment('Hostel Fee', 120000)">Apply & Pay</button>
+                </div></div>
+                <div class="card"><div class="card-body">
+                  <h3>Female Hall B</h3>
+                  <p class="meta">4-bed room · ₦120,000 / session</p>
+                  <button class="btn btn-sm btn-green mt-1" onclick="makePayment('Hostel Fee', 120000)">Apply & Pay</button>
+                </div></div>
+                <div class="card"><div class="card-body">
+                  <h3>Premium Suite</h3>
+                  <p class="meta">2-bed · ₦250,000 / session</p>
+                  <button class="btn btn-sm btn-green mt-1" onclick="makePayment('Hostel Fee', 250000)">Apply & Pay</button>
+                </div></div>
+              </div>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      if (page === 'email') {
+        document.getElementById('content').innerHTML = `
+          <div class="panel">
+            <div class="panel-header"><h3>Request Official School Email</h3></div>
+            <div class="panel-body">
+              <p class="mb-2">Your official Achievers University email will be used for academic communications, results, and portal access.</p>
+              <button class="btn btn-green" onclick="requestEmail()">Request Official Email</button>
+              <div id="emailAlert" class="hidden mt-2"></div>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      // Generic placeholder
+      document.getElementById('content').innerHTML = `
+        <div class="panel">
+          <div class="panel-header"><h3>${page.charAt(0).toUpperCase() + page.slice(1)}</h3></div>
+          <div class="panel-body">
+            <p class="text-muted">This section is available in the full production system. Demo focuses on core student features.</p>
+          </div>
+        </div>
+      `;
+    }
+
+    async function regCourse(id) {
+      const res = await fetch('/api/student/register-course', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ courseId: id })
+      });
+      const data = await res.json();
+      alert(data.message || data.error);
+      showPage('courses');
+    }
+
+    async function dropCourse(id) {
+      await fetch('/api/student/drop-course', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ courseId: id })
+      });
+      showPage('courses');
+    }
+
+    async function makePayment(type, amount) {
+      const res = await fetch('/api/student/pay', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ paymentType: type, amount })
+      });
+      const data = await res.json();
+      alert(data.message + '\nReference: ' + data.reference);
+      dashboardData = null;
+      showPage('payments');
+    }
+
+    async function requestEmail() {
+      const res = await fetch('/api/student/request-email', { method: 'POST' });
+      const data = await res.json();
+      const el = document.getElementById('emailAlert');
+      el.className = 'alert alert-success mt-2';
+      el.textContent = data.message + ' Suggested: ' + data.email;
+      el.classList.remove('hidden');
+    }
+
+    async function saveMedical() {
+      const blood_group = document.getElementById('bloodGroup').value;
+      const genotype = document.getElementById('genotype').value;
+      await fetch('/api/student/update-medical', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ blood_group, genotype })
+      });
+      const el = document.getElementById('medAlert');
+      el.className = 'alert alert-success mt-2';
+      el.textContent = 'Medical profile updated successfully.';
+      el.classList.remove('hidden');
+      dashboardData = null;
+    }
+
+    async function logout() {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.href = '/login.html';
+    }
+
+    function toggleSidebar() {
+      document.querySelector('.sidebar').classList.toggle('open');
+      document.getElementById('overlay').classList.toggle('show');
+    }
+    function closeSidebar() {
+      document.querySelector('.sidebar').classList.remove('open');
+      document.getElementById('overlay').classList.remove('show');
+    }
+
+    // Init
+    document.querySelectorAll('.sidebar-nav a').forEach(a => {
+      a.addEventListener('click', e => {
+        e.preventDefault();
+        showPage(a.dataset.page);
+        closeSidebar();
+      });
+    });
+
+    (async () => {
+      const auth = await checkAuth();
+      if (auth) await loadDashboard();
+    })();
+  </script>
+</body>
+</html>
